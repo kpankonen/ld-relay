@@ -1,0 +1,7 @@
+FROM alpine:3.4
+
+RUN apk --update upgrade \
+ && apk add go godep \
+ && rm -rf /var/cache/apk/*
+
+WORKDIR /build

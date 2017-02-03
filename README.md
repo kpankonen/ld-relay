@@ -78,3 +78,46 @@ You can also configure an in-memory cache for the relay to use so that connectio
 If you're not using a load balancer in front of LDR, you can configure your SDKs to connect to Redis directly by setting `use_ldd` mode to `true` in your SDK, and connecting to Redis with the same host and port in your SDK configuration.
 
 
+Docker
+-------
+
+To build the ld-relay container:
+
+        $ docker build -t ld-relay-build -f Dockerfile-build . # create the build container image
+        $ docker run -v $(pwd):/build -t -i -e CGO_ENABLED=0 -e GOOS=linux ld-relay-build godep go build -a -installsuffix cgo -o ldr # create the ldr binary
+        $ docker build -t ld-relay . # build the ld-relay container image
+        $ docker rmi ld-relay-build # remove the build container image that is no longer needed
+
+To run a single environment, without Redis:
+
+        $ docker run --name ld-relay -e LD_ENV_test="sdk-test-apiKey" ld-relay
+
+To run multiple environments, without Redis:
+
+        $ docker run --name ld-relay -e LD_ENV_test="sdk-test-apiKey" -e LD_ENV_prod="sdk-prod-apiKey" ld-relay
+
+To run a single environment, with Redis:
+
+        $ docker run --name redis redis:alpine
+        $ docker run --name ld-relay --link redis:redis -e USE_REDIS=1 -e LD_ENV_test="sdk-test-apiKey" ld-relay
+
+To run multiple environment, with Redis:
+
+        $ docker run --name redis redis:alpine
+        $ docker run --name ld-relay --link redis:redis -e USE_REDIS=1 -e LD_ENV_test="sdk-test-apiKey" -e LD_PREFIX_test="ld:default:test" -e LD_ENV_prod="sdk-prod-apiKey" -e LD_PREFIX_prod="ld:default:prod" ld-relay
+
+
+Docker Environment Variables
+-------
+
+`LD_ENV_${environment}`: At least one `LD_ENV_${environment}` variable is recommended.  The value should be the api key for that specific environment.  Multiple environments can be listed
+
+`LD_PREFIX_${environment}`: This variable is optional.  Configures a Redis prefix for that specific environment.  Multiple environments can be listed
+
+`USE_REDIS`: This variable is optional.  If set to 1, Redis configuration will be added
+
+`REDIS_HOST`: This variable is optional.  Sets the hostname of the Redis server.  If linked to a redis container that sets `REDIS_PORT` to `tcp://172.17.0.2:6379`, `REDIS_HOST` will use this value as the default.  If not, the default value is `redis`
+
+`REDIS_PORT`: This variable is optional.  Sets the port of the Redis server.  If linked to a redis container that sets `REDIS_PORT` to `REDIS_PORT=tcp://172.17.0.2:6379`, `REDIS_PORT` will use this value as the default.  If not, the defualt value is `6379`
+
+`REDIS_TTL`: This variable is optional.  Sets the TTL in milliseconds, defaults to `30000`
